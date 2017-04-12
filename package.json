@@ -4,6 +4,7 @@
   "description": "PDF form fill with UTF-8 support, using pdftk",
   "main": "index.js",
   "scripts": {
+    "build:doc": "jsdoc index.js -d doc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -16,5 +17,8 @@
   "dependencies": {
     "tmp": "0.0.31",
     "xfdf": "^0.2.0"
+  },
+  "devDependencies": {
+    "jsdoc": "^3.4.3"
   }
 }
