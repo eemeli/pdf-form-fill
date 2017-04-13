@@ -1,6 +1,6 @@
 {
   "name": "pdf-form-fill",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "PDF form fill with UTF-8 support, using pdftk",
   "main": "index.js",
   "scripts": {
