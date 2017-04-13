@@ -20,7 +20,8 @@ The API is minimal:
 - `fill(pdf, data[, options])` will return a promise resolving with a [Readable sream] of the output PDF.
   `options` only supports one option, `flatten`, which defaults to `true`
 
-For more details, read the [source code](index.js).
+On error, the promises returned by both functions will reject with an Error object. For more details, read the
+[source code](index.js).
 
 
 ### Example
@@ -43,6 +44,8 @@ fill(scrPdf, data)
   .catch(err => console.error(err))
 ```
 
+For a more complete example, see the [pdf-form-fill-server] source code.
+
 
 ### Notes
 
@@ -55,6 +58,7 @@ Some aspects of this code were inspired by [pdffiller-stream], but all the code 
 
 
 [ISC license]: https://en.wikipedia.org/wiki/ISC_license
+[pdf-form-fill-server]: https://github.com/eemeli/pdf-form-fill-server
 [pdffiller-stream]: https://www.npmjs.com/package/pdffiller-stream
 [PDFtk]: https://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
 [Promise]: https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise
