@@ -7,13 +7,22 @@
     "build:doc": "jsdoc index.js -d doc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eemeli/pdf-form-fill.git"
+  },
   "keywords": [
     "pdf",
+    "pdftk",
     "fill_form",
     "xfdf"
   ],
   "author": "Eemeli Aro <eemeli@gmail.com>",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eemeli/pdf-form-fill/issues"
+  },
+  "homepage": "https://github.com/eemeli/pdf-form-fill#readme",
   "dependencies": {
     "tmp": "0.0.31",
     "xfdf": "^0.2.0"
