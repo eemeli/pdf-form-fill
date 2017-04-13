@@ -11,11 +11,11 @@ const xfdf = require('xfdf')
  */
 function fields (pdf) {
   return new Promise((resolve, reject) => {
-    const pdftk = spawn('pdftk', [pdf, 'dump_data_fields_utf8'])
-    pdftk.on('error', reject)
+    const { stderr, stdout } = spawn('pdftk', [pdf, 'dump_data_fields_utf8'])
     let output = ''
-    pdftk.stdout.on('data', (chunk) => { output += chunk })
-    pdftk.stdout.on('end', () => {
+    stderr.on('data', (err) => reject(new Error(err.toString())))
+    stdout.on('data', (chunk) => { output += chunk })
+    stdout.on('end', () => {
       const result = {}
       output.split('---').forEach(field => {
         const data = {}
@@ -79,7 +79,7 @@ function fill (pdf, fields, options = {}) {
           resolve(stdout)
           stdout.removeListener('data', listener)
         }
-        stderr.on('data', reject)
+        stderr.on('data', (err) => reject(new Error(err.toString())))
         stdout.on('data', listener)
       })
     })
