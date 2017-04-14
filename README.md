@@ -27,8 +27,9 @@ The API is minimal:
 On error, the promises returned by both functions will reject with an Error object. For more details, read the
 [source code](index.js).
 
-Setting info values will require spawning a second pdftk instance and piping its output to the `fill_form` instance.
-This will slow down the processing a bit; use `options.verbose` to test the execution time on your systems.
+Setting any info values will require spawning a second pdftk instance and writing an intermediate PDF to a temporary
+file (piping output turns out to pdftk turns out to be rather flaky). This will slow down the processing a bit; use
+`options.verbose` to test the execution time on your systems.
 
 
 ### Example

@@ -24,7 +24,6 @@
   },
   "homepage": "https://github.com/eemeli/pdf-form-fill#readme",
   "dependencies": {
-    "is-stream": "^1.1.0",
     "tmp": "0.0.31",
     "xfdf": "^0.2.0"
   },

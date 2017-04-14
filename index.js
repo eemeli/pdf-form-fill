@@ -1,6 +1,5 @@
 const spawn = require('child_process').spawn
 const fs = require('fs')
-const isStream = require('is-stream')
 const tmp = require('tmp')
 const XFDF = require('xfdf')
 
@@ -60,19 +59,20 @@ const pdfInfo = (info) => {
   ), '')
 }
 
-const setInfo = (pdf, info, verbose, label) => {
-  const { stdin, stdout, stderr } = spawn('pdftk', [pdf, 'update_info_utf8', '-', 'output', '-'])
-  if (verbose) stderr.on('data', (err) => console.error(label + ' setInfo:', err.toString()))
-  stdin.write(pdfInfo(info), 'utf8', () => stdin.end())
-  return stdout
-}
+const setInfo = (pdf, info, verbose, label) => new Promise((resolve, reject) => {
+  tmp.file((err, path, fd) => {
+    if (err) return reject(err)
+    const { stdin, stdout, stderr } = spawn('pdftk', [pdf, 'update_info_utf8', '-', 'output', path])
+    stderr.on('data', reject)
+    stdout.on('end', () => resolve(path))
+    stdin.write(pdfInfo(info), 'utf8', () => stdin.end())
+  })
+})
 
-const fillForm = (input, xfdf, flatten) => new Promise((resolve, reject) => {
-  const isInputStream = isStream(input)
-  const args = [isInputStream ? '-' : input, 'fill_form', xfdf, 'output', '-']
+const fillForm = (pdf, xfdf, flatten) => new Promise((resolve, reject) => {
+  const args = [pdf, 'fill_form', xfdf, 'output', '-']
   if (flatten) args.push('flatten')
-  const { stdin, stdout, stderr } = spawn('pdftk', args, { stdio: [isInputStream ? input : null] })
-  if (isInputStream) input.destroy()  // https://github.com/nodejs/node/issues/9413#issuecomment-258604006
+  const { stdout, stderr } = spawn('pdftk', args)
   stderr.on('data', reject)
   stdout.on('readable', () => resolve(stdout))
 })
@@ -91,8 +91,10 @@ const fillForm = (input, xfdf, flatten) => new Promise((resolve, reject) => {
  * @param {string} [options.info.Author] - The name of the person who created the document.
  * @param {string} [options.info.Subject] - The subject of the document.
  * @param {string} [options.info.Keywords] - Keywords associated with the document.
- * @param {string} [options.info.Creator] - If the document was converted to PDF from another format, the name of the application that created the original document from which it was converted.
- * @param {string} [options.info.Producer] - If the document was converted to PDF from another format, the name of the application that converted it to PDF.
+ * @param {string} [options.info.Creator] - If the document was converted to PDF from another format,
+ *   the name of the application that created the original document from which it was converted.
+ * @param {string} [options.info.Producer] - If the document was converted to PDF from another format,
+ *   the name of the application that converted it to PDF.
  * @param {boolean} [options.verbose=false] - Print stuff to the console
  * @returns {Promise(stream.Readable)} provides the output PDF
  *
@@ -114,26 +116,27 @@ function fill (pdf, fields, options = {}) {
     console.log(label + ':', 'Filling PDF', pdf, 'with fields', fields, 'and options', options)
     console.time(label)
   }
+  let xfdf
   return new Promise((resolve, reject) => {
     fs.access(pdf, fs.constants.R_OK, (err) => {
-      if (err) return reject(err)
-      tmp.file((err, xfdf, fd) => {
-        if (err) return reject(err)
-        const xfdfBuilder = new XFDF({ pdf })
-        xfdfBuilder.fromJSON({ fields })
-        fs.write(fd, xfdfBuilder.generate(), (err, written) => {
-          if (err) reject(err)
-          else if (written === 0) reject('xfdf wrote 0 bytes!')
-          else resolve(xfdf)
-        })
-      })
+      if (err) reject(err)
+      else resolve(pdf)
     })
   })
-  .then(xfdf => ({
-    input: info ? setInfo(pdf, info, verbose, label) : pdf,
-    xfdf
+  .then(pdf => info ? setInfo(pdf, info) : pdf)
+  .then(pdf => new Promise((resolve, reject) => {
+    tmp.file((err, xfdf, fd) => {
+      if (err) return reject(err)
+      const xfdfBuilder = new XFDF({ pdf })
+      xfdfBuilder.fromJSON({ fields })
+      fs.write(fd, xfdfBuilder.generate(), (err, written) => {
+        if (err) reject(err)
+        else if (written === 0) reject('xfdf wrote 0 bytes!')
+        else resolve({ pdf, xfdf })
+      })
+    })
   }))
-  .then(({ input, xfdf }) => fillForm(input, xfdf, flatten))
+  .then(({ pdf, xfdf }) => fillForm(pdf, xfdf, flatten))
   .then(output => {
     if (verbose) console.timeEnd(label)
     return output
