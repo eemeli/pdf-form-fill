@@ -17,11 +17,18 @@ Release as open source under the [ISC license].
 
 The API is minimal:
 - `fields(pdf)` will return a [Promise] resolving with a simple object describing the PDF's available fields.
-- `fill(pdf, data[, options])` will return a promise resolving with a [Readable sream] of the output PDF.
-  `options` only supports one option, `flatten`, which defaults to `true`
+- `fill(pdf, fields[, options])` will return a promise resolving with a [Readable sream] of the output PDF. the
+  following `options` are supported:
+  - `flatten`: Flatten the resulting PDF (default `true`)
+  - `info`: Info fields to be set in the output, such as `CreationTime`, `ModTime`, `Title`, `Author`, etc. Time
+    values should be Date objects; all others should be strings.
+  - `verbose`: Print stuff to the console (default `false`)
 
 On error, the promises returned by both functions will reject with an Error object. For more details, read the
 [source code](index.js).
+
+Setting info values will require spawning a second pdftk instance and piping its output to the `fill_form` instance.
+This will slow down the processing a bit; use `options.verbose` to test the execution time on your systems.
 
 
 ### Example
@@ -32,14 +39,14 @@ const { fields, fill } = require('pdf-form-fill')
 
 const srcPdf = '...'
 const tgtPdf = '...'
-const data = { name1: 'Value 1', checkbox2: 'Yes' }
+const fields = { name1: 'Value 1', checkbox2: 'Yes' }
 
 fields(srcPdf)
   .then(shape => console.log(shape))
   .catch(err => console.error(err))
 
 const output = fs.createWriteStream(tgtPdf)
-fill(scrPdf, data)
+fill(scrPdf, fields)
   .then(stream => stream.pipe(output))
   .catch(err => console.error(err))
 ```

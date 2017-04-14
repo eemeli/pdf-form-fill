@@ -90,7 +90,15 @@ const fillForm = (input, xfdf, flatten, reject, resolve) => {
  * @param {Object} fields - a flat map of data to populate the form's fields
  * @param {Object} [options] - optionally customise the output
  * @param {boolean} [options.flatten=true] - Flatten the resulting PDF
- * @param {Object} [options.info] - info fields to be set in the output
+ * @param {Object} [options.info] - info fields to be set in the output PDF
+ * @param {Date} [options.info.CreationDate] - The date and time the document was created
+ * @param {Date} [options.info.ModDate - The date and time the document was most recently modified
+ * @param {string} [options.info.Title] - The document’s title.
+ * @param {string} [options.info.Author] - The name of the person who created the document.
+ * @param {string} [options.info.Subject] - The subject of the document.
+ * @param {string} [options.info.Keywords] - Keywords associated with the document.
+ * @param {string} [options.info.Creator] - If the document was converted to PDF from another format, the name of the application that created the original document from which it was converted.
+ * @param {string} [options.info.Producer] - If the document was converted to PDF from another format, the name of the application that converted it to PDF.
  * @param {boolean} [options.verbose=false] - Print stuff to the console
  * @returns {Promise(stream.Readable)} provides the output PDF
  *
