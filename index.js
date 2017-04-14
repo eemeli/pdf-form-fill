@@ -60,28 +60,22 @@ const pdfInfo = (info) => {
   ), '')
 }
 
-const setInfo = (pdf, info, reject) => {
+const setInfo = (pdf, info, verbose, label) => {
   const { stdin, stdout, stderr } = spawn('pdftk', [pdf, 'update_info_utf8', '-', 'output', '-'])
-  stderr.on('data', reject)
+  if (verbose) stderr.on('data', (err) => console.error(label + ' setInfo:', err.toString()))
   stdin.write(pdfInfo(info), 'utf8', () => stdin.end())
   return stdout
 }
 
-const fillForm = (input, xfdf, flatten, reject, resolve) => {
+const fillForm = (input, xfdf, flatten) => new Promise((resolve, reject) => {
   const isInputStream = isStream(input)
   const args = [isInputStream ? '-' : input, 'fill_form', xfdf, 'output', '-']
   if (flatten) args.push('flatten')
   const { stdin, stdout, stderr } = spawn('pdftk', args, { stdio: [isInputStream ? input : null] })
   if (isInputStream) input.destroy()  // https://github.com/nodejs/node/issues/9413#issuecomment-258604006
-  const listener = (data) => {
-    stdout.pause()
-    stdout.unshift(data)
-    stdout.removeListener('data', listener)
-    resolve(stdout)
-  }
   stderr.on('data', reject)
-  stdout.on('data', listener)
-}
+  stdout.on('readable', () => resolve(stdout))
+})
 
 
 /** Fill a PDF form with data
@@ -120,30 +114,34 @@ function fill (pdf, fields, options = {}) {
     console.log(label + ':', 'Filling PDF', pdf, 'with fields', fields, 'and options', options)
     console.time(label)
   }
-  const xfdfBuilder = new XFDF({ pdf })
-  xfdfBuilder.fromJSON({ fields })
   return new Promise((resolve, reject) => {
-    const _reject = (err) => {
-      if (!(err instanceof Error)) err = new Error(err.toString())
-      if (verbose) console.error(label + ':', err)
-      reject(err)
-    }
-    const _resolve = (res) => {
-      if (verbose) console.timeEnd(label)
-      resolve(res)
-    }
     fs.access(pdf, fs.constants.R_OK, (err) => {
-      if (err) return _reject(err)
+      if (err) return reject(err)
       tmp.file((err, xfdf, fd) => {
-        if (err) return _reject(err)
+        if (err) return reject(err)
+        const xfdfBuilder = new XFDF({ pdf })
+        xfdfBuilder.fromJSON({ fields })
         fs.write(fd, xfdfBuilder.generate(), (err, written) => {
-          if (err) return _reject(err)
-          if (written === 0) return _reject('xfdf wrote 0 bytes!')
-          const input = info ? setInfo(pdf, info, _reject) : pdf
-          fillForm(input, xfdf, flatten, _reject, _resolve)
+          if (err) reject(err)
+          else if (written === 0) reject('xfdf wrote 0 bytes!')
+          else resolve(xfdf)
         })
       })
     })
+  })
+  .then(xfdf => ({
+    input: info ? setInfo(pdf, info, verbose, label) : pdf,
+    xfdf
+  }))
+  .then(({ input, xfdf }) => fillForm(input, xfdf, flatten))
+  .then(output => {
+    if (verbose) console.timeEnd(label)
+    return output
+  })
+  .catch(err => {
+    if (!(err instanceof Error)) err = new Error(err.toString())
+    if (verbose) console.error(label + ':', err)
+    throw err
   })
 }
 
