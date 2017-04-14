@@ -89,6 +89,7 @@ const fillForm = (input, xfdf, flatten, reject, resolve) => {
  * @param {Object} [options] - optionally customise the output
  * @param {boolean} [options.flatten=true] - Flatten the resulting PDF
  * @param {Object} [options.info] - info fields to be set in the output
+ * @param {boolean} [options.verbose=false] - Print stuff to the console
  * @returns {Promise(stream.Readable)} provides the output PDF
  *
  * @example
@@ -103,13 +104,23 @@ const fillForm = (input, xfdf, flatten, reject, resolve) => {
  *   .catch(err => console.error(err))
  */
 function fill (pdf, fields, options = {}) {
-  const { flatten = true, info } = options
+  const { flatten = true, info, verbose = false } = options
+  if (verbose) {
+    var label = `fill(${Math.random().toString().substr(2,3)})`
+    console.log(label + ':', 'Filling PDF', pdf, 'with fields', fields, 'and options', options)
+    console.time(label)
+  }
   const xfdfBuilder = new XFDF({ pdf })
   xfdfBuilder.fromJSON({ fields })
   return new Promise((resolve, reject) => {
     const _reject = (err) => {
       if (!(err instanceof Error)) err = new Error(err.toString())
+      if (verbose) console.error(label + ':', err)
       reject(err)
+    }
+    const _resolve = (res) => {
+      if (verbose) console.timeEnd(label)
+      resolve(res)
     }
     fs.access(pdf, fs.constants.R_OK, (err) => {
       if (err) return _reject(err)
@@ -119,7 +130,7 @@ function fill (pdf, fields, options = {}) {
           if (err) return _reject(err)
           if (written === 0) return _reject('xfdf wrote 0 bytes!')
           const stream = setInfo(pdf, info, _reject)
-          fillForm(stream, xfdf, flatten, _reject, resolve)
+          fillForm(stream, xfdf, flatten, _reject, _resolve)
         })
       })
     })
