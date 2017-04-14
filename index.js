@@ -1,5 +1,6 @@
 const spawn = require('child_process').spawn
 const fs = require('fs')
+const isStream = require('is-stream')
 const tmp = require('tmp')
 const XFDF = require('xfdf')
 
@@ -67,10 +68,11 @@ const setInfo = (pdf, info, reject) => {
 }
 
 const fillForm = (input, xfdf, flatten, reject, resolve) => {
-  const args = ['-', 'fill_form', xfdf, 'output', '-']
+  const isInputStream = isStream(input)
+  const args = [isInputStream ? '-' : input, 'fill_form', xfdf, 'output', '-']
   if (flatten) args.push('flatten')
-  const { stdin, stdout, stderr } = spawn('pdftk', args, { stdio: [input] })
-  input.destroy()  // https://github.com/nodejs/node/issues/9413#issuecomment-258604006
+  const { stdin, stdout, stderr } = spawn('pdftk', args, { stdio: [isInputStream ? input : null] })
+  if (isInputStream) input.destroy()  // https://github.com/nodejs/node/issues/9413#issuecomment-258604006
   const listener = (data) => {
     stdout.pause()
     stdout.unshift(data)
@@ -129,8 +131,8 @@ function fill (pdf, fields, options = {}) {
         fs.write(fd, xfdfBuilder.generate(), (err, written) => {
           if (err) return _reject(err)
           if (written === 0) return _reject('xfdf wrote 0 bytes!')
-          const stream = setInfo(pdf, info, _reject)
-          fillForm(stream, xfdf, flatten, _reject, _resolve)
+          const input = info ? setInfo(pdf, info, _reject) : pdf
+          fillForm(input, xfdf, flatten, _reject, _resolve)
         })
       })
     })
